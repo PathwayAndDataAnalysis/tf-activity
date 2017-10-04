@@ -22,7 +22,8 @@ public class Main
 	/**
 	 * The default name of the result file.
 	 */
-	public static final String DEFAULT_OUTPUT_FILENAME = "TF-activity-results-wTF.txt";
+	public static final String DEFAULT_OUTPUT_FILENAME = "TF-activity-results.txt";
+	public static final String DEFAULT_GRAPH_FILENAME =  "TF-similarity-graph";
 
 	/**
 	 * The directory that contains the parameters file.
@@ -33,6 +34,11 @@ public class Main
 	 * Name of the output file.
 	 */
 	String outputFile;
+
+	/**
+	 * Name of the output graph (sif) file without .sif extension.
+	 */
+	String outputGraphFile;
 
 	/**
 	 * Type of the expression file.
@@ -65,6 +71,11 @@ public class Main
 	int minimumTargets;
 
 	/**
+	 * Threshold for Jaccard similarity to present on the similarity graph.
+	 */
+	double jaccardSimilarityThrehsold = 0.2;
+
+	/**
 	 * Constructor that sets the working directory and initializes data structures.
 	 *
 	 * @param directory The directory that contains parameters file and where the output will be generated.
@@ -87,13 +98,14 @@ public class Main
 		readParameters(directory);
 
 		if (outputFile == null) outputFile = directory + "/" + DEFAULT_OUTPUT_FILENAME;
+		if (outputGraphFile == null) outputGraphFile= directory + "/" + DEFAULT_GRAPH_FILENAME;
 
 		NetworkLoader nl = new NetworkLoader();
 
 		if (signedAnalysis)
 		{
 			// load the signed SIF network
-			Map<String, Map<String, Integer>> network = nl.loadSigned();
+			Map<String, Map<String, Integer>> network = nl.loadSignedTCGAConsensus();
 			nl.cleanSigned(network, expProvider, minimumTargets);
 
 			// run analysis
@@ -110,6 +122,9 @@ public class Main
 			UnsignedAnalysis ua = new UnsignedAnalysis(network, expProvider);
 			ua.run(outputFile, fdrThr);
 		}
+
+		ResultListToGraph rltg = new ResultListToGraph(outputFile, jaccardSimilarityThrehsold);
+		rltg.draw(outputGraphFile);
 	}
 
 	/**
@@ -153,6 +168,7 @@ public class Main
 		RANDOM_ITERATIONS((value, main) -> main.iterations = Integer.valueOf(value)),
 		FDR_THRESHOLD((value, main) -> main.fdrThr = Double.valueOf(value)),
 		MINIMUM_TARGETS((value, main) -> main.minimumTargets = Integer.valueOf(value)),
+		JACCARD_SIMILARITY_THRESHOLD((value, main) -> main.jaccardSimilarityThrehsold= Double.valueOf(value)),
 
 		EXPRESSION_FILE((value, main) ->
 		{
@@ -165,7 +181,11 @@ public class Main
 					main.expProvider = new TCGAExpressionProvider(value);
 					break;
 				}
-				case Custom: throw new RuntimeException("Not implemented yet");
+				case Custom:
+				{
+					main.expProvider = new CustomExpressionProvider(value);
+					break;
+				}
 			}
 		}),
 
@@ -176,13 +196,14 @@ public class Main
 			switch (main.expResType)
 			{
 				case TCGA:
+				case Custom:
 				{
 					TwoGroupsSampleNames two = new TwoGroupsSampleNames(value);
 					two.filterOutMissingSamples(((TCGAExpressionProvider) main.expProvider).er.getSamples());
 					((TCGAExpressionProvider) main.expProvider).setTwo(two);
 					break;
 				}
-				case Custom: throw new RuntimeException("Not implemented yet");
+				default: throw new RuntimeException("Not implemented yet");
 			}
 		}),
 
@@ -204,11 +225,12 @@ public class Main
 			switch (main.expResType)
 			{
 				case TCGA:
+				case Custom:
 				{
 					((TCGAExpressionProvider) main.expProvider).setFDRThr(Double.valueOf(value));
 					break;
 				}
-				case Custom: throw new RuntimeException("Not implemented yet");
+				default: throw new RuntimeException("Not implemented yet");
 			}
 		}),
 		;

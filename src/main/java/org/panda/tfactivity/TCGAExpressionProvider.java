@@ -26,6 +26,13 @@ public class TCGAExpressionProvider implements DiscreteExpressionProvider
 		cache = new HashMap<>();
 	}
 
+	/**
+	 * Empty constructor for extending classes.
+	 */
+	public TCGAExpressionProvider()
+	{
+	}
+
 	public void setTwo(TwoGroupsSampleNames two)
 	{
 		this.two = two;

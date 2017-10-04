@@ -5,6 +5,9 @@ import org.panda.resource.network.*;
 import org.panda.resource.signednetwork.SignedType;
 import org.panda.utility.graph.DirectedGraph;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,6 +21,18 @@ import java.util.stream.Collectors;
  */
 public class NetworkLoader
 {
+	public Map<String, Map<String, Integer>> loadSignedTCGAConsensus() throws IOException
+	{
+		Map<String, Map<String, Integer>> map = new HashMap<>();
+		Files.lines(Paths.get("/home/babur/Documents/PC/SignedByTCGAConsensusFiltered.sif")).map(l -> l.split("\t")).forEach(t ->
+		{
+			if (!map.containsKey(t[0])) map.put(t[0], new HashMap<>());
+			map.get(t[0]).put(t[2], t[1].startsWith("u") ? 1 : -1);
+		});
+		return map;
+	}
+
+
 	/**
 	 * Loads the network.
 	 * @return ordered sets of graphs
